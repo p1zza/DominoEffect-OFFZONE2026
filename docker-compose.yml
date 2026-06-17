@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  web:
+    build: ./web
+    container_name: web-ctf
+    ports:
+      - "8080:5000"
+    environment:
+      - FLAG_WEB=ctf{ssti_escape_master}
+      - INTERNAL_HOST=172.20.0.5
+      - INTERNAL_USER=ctfuser
+    volumes:
+      - ssh-keys:/shared:ro
+    networks:
+      - ctf-net
+    depends_on:
+      - internal
+
+  internal:
+    build: ./internal
+    container_name: internal-ctf
+    expose:
+      - "22"
+    environment:
+      - FLAG_INTERNAL=ctf{ssh_pivot_to_database}
+    volumes:
+      - internal-data:/data
+      - ssh-keys:/shared:ro
+    networks:
+      ctf-net:
+        ipv4_address: 172.20.0.5
+
+networks:
+  ctf-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+          gateway: 172.20.0.1
+
+volumes:
+  internal-data:
+  ssh-keys:
