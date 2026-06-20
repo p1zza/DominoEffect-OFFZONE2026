@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Login - CRM System{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 400px; margin: 50px auto;">
+    <h2>Login</h2>
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+    <form method="POST">
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" name="username" required>
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" name="password" required>
+        </div>
+        <button type="submit" class="btn">Login</button>
+    </form>
+    <p style="margin-top: 15px; color: #666; font-size: 14px;">Don't have an account? <a href="/register">Register</a></p>
+    <p style="margin-top: 5px; color: #666; font-size: 12px;">Hint: try admin/admin123 or manager/manager123</p>
+</div>
+{% endblock %}

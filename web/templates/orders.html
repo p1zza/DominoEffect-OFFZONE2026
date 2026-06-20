@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Orders - CRM System{% endblock %}
+
+{% block content %}
+<h1>Orders</h1>
+<div class="card">
+    <a href="/new_order" class="btn btn-success">+ New Order</a>
+    <table>
+        <tr><th>ID</th><th>Client</th><th>Product</th><th>Amount</th><th>Status</th><th>Manager</th><th>Date</th></tr>
+        {% if all_orders %}
+            {% for order in all_orders %}
+            <tr>
+                <td>#{{ order.id }}</td>
+                <td>{{ order.client_name }}</td>
+                <td>{{ order.product }}</td>
+                <td>${{ "%.2f"|format(order.amount) }}</td>
+                <td class="status-{{ order.status }}">{{ order.status|title }}</td>
+                <td>{{ order.manager or 'Unknown' }}</td>
+                <td>{{ order.created_at }}</td>
+            </tr>
+            {% endfor %}
+        {% else %}
+            <tr><td colspan="7" style="text-align:center;">No orders found</td></tr>
+        {% endif %}
+    </table>
+</div>
+{% endblock %}

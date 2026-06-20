@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}New Order - CRM System{% endblock %}
+
+{% block content %}
+<h1>New Order</h1>
+<div class="card" style="max-width: 600px;">
+    <form method="POST">
+        <div class="form-group">
+            <label>Client Name</label>
+            <input type="text" name="client_name" required>
+        </div>
+        <div class="form-group">
+            <label>Product</label>
+            <input type="text" name="product" required>
+        </div>
+        <div class="form-group">
+            <label>Amount ($)</label>
+            <input type="number" step="0.01" name="amount" required>
+        </div>
+        <button type="submit" class="btn">Create Order</button>
+        <a href="/orders" class="btn" style="background: #6c757d;">Cancel</a>
+    </form>
+</div>
+{% endblock %}
