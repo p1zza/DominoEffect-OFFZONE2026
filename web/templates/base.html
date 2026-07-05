@@ -14,6 +14,7 @@
         .btn:hover { background: #0056b3; }
         .btn-danger { background: #dc3545; }
         .btn-success { background: #28a745; }
+        .btn-warning { background: #ffc107; color: #333; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background: #f8f9fa; }
@@ -26,6 +27,13 @@
         .status-new { color: #007bff; }
         .status-processing { color: #ffc107; }
         .status-completed { color: #28a745; }
+        .role-admin { color: #dc3545; font-weight: bold; }
+        .role-manager { color: #007bff; }
+        .role-user { color: #28a745; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        .badge-admin { background: #dc3545; color: white; }
+        .badge-manager { background: #007bff; color: white; }
+        .badge-user { background: #28a745; color: white; }
     </style>
 </head>
 <body>
@@ -36,7 +44,10 @@
                 <a href="/dashboard">Dashboard</a>
                 <a href="/orders">Orders</a>
                 <a href="/new_order">New Order</a>
-                <a href="/logout" style="float: right;">Logout ({{ session.username }})</a>
+                {% if session.role >= 2 %}
+                <a href="/users">Users</a>
+                {% endif %}
+                <a href="/logout" style="float: right;">Logout ({{ session.username }} | {{ role_name }})</a>
             {% else %}
                 <a href="/login">Login</a>
                 <a href="/register">Register</a>

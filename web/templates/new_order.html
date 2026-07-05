@@ -18,6 +18,18 @@
             <label>Amount ($)</label>
             <input type="number" step="0.01" name="amount" required>
         </div>
+        {% if session.role >= 2 and users %}
+        <div class="form-group">
+            <label>Assign to User</label>
+            <select name="user_id">
+                {% for u in users %}
+                <option value="{{ u.id }}" {% if u.id == session.user_id %}selected{% endif %}>
+                    {{ u.username }} ({{ role_names[u.role]|title }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
         <button type="submit" class="btn">Create Order</button>
         <a href="/orders" class="btn" style="background: #6c757d;">Cancel</a>
     </form>

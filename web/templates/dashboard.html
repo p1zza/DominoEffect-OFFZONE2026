@@ -14,10 +14,39 @@
         <p style="font-size: 32px; color: #28a745;">{{ my_orders }}</p>
     </div>
     <div class="card">
-        <h3>System Status</h3>
-        <p style="font-size: 14px; color: #666;">All systems operational</p>
+        <h3>Role</h3>
+        <p style="font-size: 24px;" class="role-{{ role_name }}">{{ role_name|title }}</p>
     </div>
 </div>
+
+{% if session.role >= 2 %}
+<div class="card" style="background: #fff3cd; border-left: 4px solid #ffc107;">
+    <h3>🛡️ Flag Backup Panel</h3>
+    <p style="color: #666; margin: 10px 0;">
+        Target: <code>172.20.0.5</code> (internal server)
+    </p>
+    <p style="color: #666; margin: 10px 0;">
+        Last backup: 
+        {% if last_backup %}
+            <span style="color: #28a745; font-weight: bold;">{{ last_backup }}</span>
+        {% else %}
+            <span style="color: #dc3545;">Never</span>
+        {% endif %}
+    </p>
+    {% if backup_status == 'success' %}
+    <div class="alert alert-success">Backup completed successfully!</div>
+    {% elif backup_status == 'error' %}
+    <div class="alert alert-error">Backup failed!</div>
+    {% endif %}
+    <form method="POST" action="/backup">
+        <button type="submit" class="btn btn-warning">🔄 Create Backup to 172.20.0.5</button>
+    </form>
+    <p style="margin-top: 10px; font-size: 12px; color: #999;">
+        Backs up flags from SQLite to /data/backup_flags.sql on internal server
+    </p>
+</div>
+{% endif %}
+
 <div class="card">
     <h2>Recent Orders</h2>
     <table>

@@ -6,6 +6,7 @@
 <h1>Orders</h1>
 <div class="card">
     <a href="/new_order" class="btn btn-success">+ New Order</a>
+    <p style="margin: 10px 0; color: #666;">Viewing as: <span class="role-{{ role_name }}">{{ role_name|title }}</span></p>
     <table>
         <tr><th>ID</th><th>Client</th><th>Product</th><th>Amount</th><th>Status</th><th>Manager</th><th>Date</th></tr>
         {% if all_orders %}
@@ -16,7 +17,12 @@
                 <td>{{ order.product }}</td>
                 <td>${{ "%.2f"|format(order.amount) }}</td>
                 <td class="status-{{ order.status }}">{{ order.status|title }}</td>
-                <td>{{ order.manager or 'Unknown' }}</td>
+                <td>
+                    {{ order.manager or 'Unknown' }}
+                    {% if session.role >= 2 and order.user_role is defined %}
+                    <span class="badge badge-{{ role_names[order.user_role] }}">{{ role_names[order.user_role] }}</span>
+                    {% endif %}
+                </td>
                 <td>{{ order.created_at }}</td>
             </tr>
             {% endfor %}
