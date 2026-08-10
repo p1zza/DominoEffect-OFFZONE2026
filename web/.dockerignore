@@ -1,0 +1,48 @@
+# Файлы Docker (не попадают в контекст сборки)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Docker-данные
+.env
+.env.*
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Документация
+README.md
+*.md
+
+# IDE и редакторы
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Виртуальные окружения
+.venv/
+venv/
+env/
+
+# Локальные данные (не должны быть в образе)
+*.db
+*.sqlite
+*.sqlite3
+/tmp/
+
+# Секреты и ключи (если есть локально)
+*.pem
+*.key
+secrets/

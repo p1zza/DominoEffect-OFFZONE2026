@@ -30,6 +30,26 @@ services:
     networks:
       ctf-net:
         ipv4_address: 172.20.0.5
+  
+  restarter:
+    image: docker:cli
+    container_name: ctf-restarter
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: >
+      sh -c '
+        echo "[restarter] Интервал: 15 минут";
+        while true; do
+          sleep 900;
+          echo "[restarter] $$(date): перезапуск web-ctf и internal-ctf...";
+          docker restart web-ctf internal-ctf;
+        done
+      '
+    restart: unless-stopped
+    depends_on:
+      - web
+      - internal
+
 
 networks:
   ctf-net:

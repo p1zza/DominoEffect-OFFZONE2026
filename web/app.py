@@ -1,9 +1,10 @@
 from flask import Flask, request, render_template_string, redirect, url_for, session
 import os, sqlite3, hashlib, subprocess, json
 from datetime import datetime
+import subprocess
 
 app = Flask(__name__)
-app.secret_key = os.urandom(32)
+app.secret_key = "Offzone2026Gamma7WebNodeSecret"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, 'templates')
@@ -22,7 +23,6 @@ app.config['INTERNAL_CREDS'] = {
 DB_PATH = '/tmp/crm.db'
 BACKUP_LOG_PATH = '/tmp/backup_log.json'
 
-# Роли: 0 = user, 1 = manager, 2 = admin
 ROLE_NAMES = {0: 'user', 1: 'manager', 2: 'admin'}
 
 def init_db():
@@ -45,9 +45,9 @@ def init_db():
         status TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
     
-    admin_pass = hashlib.sha256('admin123'.encode()).hexdigest()
-    manager_pass = hashlib.sha256('manager123'.encode()).hexdigest()
-    user_pass = hashlib.sha256('user123'.encode()).hexdigest()
+    admin_pass = hashlib.md5('ADMINISTRATOR'.encode()).hexdigest()
+    manager_pass = hashlib.md5('DIGITAL'.encode()).hexdigest()
+    user_pass = hashlib.md5('NETWORK'.encode()).hexdigest()
     
     c.execute("INSERT OR IGNORE INTO users (id, username, password, role) VALUES (1, 'admin', ?, 2)", (admin_pass,))
     c.execute("INSERT OR IGNORE INTO users (id, username, password, role) VALUES (2, 'manager', ?, 1)", (manager_pass,))
@@ -83,20 +83,56 @@ def get_last_backup():
     return None
 
 def backup_flags_to_internal():
-    """Бэкап флагов на internal сервер через SSH"""
+    """Бэкап локальной CRM-базы (/tmp/crm.db) на internal сервер в /data/ctf.db"""
     try:
-        # УЯЗВИМОСТЬ: используем os.popen для выполнения команды — можно эксплуатировать через SSTI
-        cmd = f'sshpass -p {INTERNAL_PASS} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {INTERNAL_USER}@{INTERNAL_HOST} "sqlite3 /data/ctf.db \\".dump\\" > /data/backup_flags.sql && echo \\"Backup completed at $(date)\\""'
-        result = os.popen(cmd).read()
-        
-        # Логируем в локальную БД
+        dump = subprocess.run(
+            ['sqlite3', DB_PATH, '.dump'],
+            capture_output=True, text=True
+        )
+        if dump.returncode != 0:
+            return False, f"Local dump failed: {dump.stderr}"
+
+        sql = dump.stdout.replace('CREATE TABLE ', 'CREATE TABLE IF NOT EXISTS ')
+        sql = sql.replace('INSERT INTO ', 'INSERT OR IGNORE INTO ')
+
+        tmp_local = '/tmp/crm_backup.sql'
+        with open(tmp_local, 'w') as f:
+            f.write(sql)
+
+        ssh_opts = '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+        remote_sql = '/tmp/crm_backup.sql'
+
+        scp_cmd = (
+            f'sshpass -p {INTERNAL_PASS} scp {ssh_opts} '
+            f'{tmp_local} {INTERNAL_USER}@{INTERNAL_HOST}:{remote_sql}'
+        )
+        scp_res = subprocess.run(scp_cmd, shell=True, capture_output=True, text=True)
+        if scp_res.returncode != 0:
+            os.remove(tmp_local)
+            return False, f"SCP failed: {scp_res.stderr}"
+
+        ssh_cmd = (
+            f'sshpass -p {INTERNAL_PASS} ssh {ssh_opts} '
+            f'{INTERNAL_USER}@{INTERNAL_HOST} '
+            f'"sqlite3 /data/ctf.db < {remote_sql} && rm -f {remote_sql} && echo \\"Backup completed at $(date)\\""'
+        )
+        ssh_res = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
+
+        os.remove(tmp_local)
+
+        if ssh_res.returncode != 0:
+            return False, f"Remote apply failed: {ssh_res.stderr}"
+
         conn = get_db()
-        conn.execute("INSERT INTO backups (filename, target_host, status) VALUES (?, ?, ?)",
-                     ('backup_flags.sql', INTERNAL_HOST, 'success'))
+        conn.execute(
+            "INSERT INTO backups (filename, target_host, status) VALUES (?, ?, ?)",
+            ('crm_backup.sql', INTERNAL_HOST, 'success')
+        )
         conn.commit()
         conn.close()
-        
-        return True, result
+
+        return True, ssh_res.stdout.strip()
+
     except Exception as e:
         return False, str(e)
 
@@ -111,7 +147,7 @@ def login():
     error = ''
     if request.method == 'POST':
         username = request.form.get('username', '')
-        password = hashlib.sha256(request.form.get('password', '').encode()).hexdigest()
+        password = hashlib.md5(request.form.get('password', '').encode()).hexdigest()
         conn = get_db()
         user = conn.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password)).fetchone()
         conn.close()
@@ -148,7 +184,7 @@ def register():
             if existing:
                 error = 'Username already exists'
             else:
-                password_hash = hashlib.sha256(password.encode()).hexdigest()
+                password_hash = hashlib.md5(password.encode()).hexdigest()
                 conn.execute("INSERT INTO users (username, password, role) VALUES (?, ?, 0)", (username, password_hash))
                 conn.commit()
                 success = 'Registration successful! Please login.'
@@ -169,10 +205,8 @@ def dashboard():
     recent = conn.execute("SELECT * FROM orders ORDER BY created_at DESC LIMIT 5").fetchall()
     conn.close()
     
-    # SSTI уязвимость
     name = request.args.get('name', session.get('username', 'User'))
     
-    # Данные для бэкапа (только для admin)
     last_backup = None
     backup_status = None
     if session.get('role', 0) >= 2:
@@ -201,7 +235,6 @@ def backup():
     success, result = backup_flags_to_internal()
     status = 'success' if success else 'error'
     
-    # УЯЗВИМОСТЬ: результат бэкапа можно увидеть через SSTI на dashboard
     return redirect(url_for('dashboard', backup_status=status))
 
 @app.route('/orders')
@@ -212,17 +245,17 @@ def orders():
     conn = get_db()
     role = session.get('role', 0)
     
-    if role >= 2:  # admin
+    if role >= 2:  
         all_orders = conn.execute("""
             SELECT o.*, u.username as manager, u.role as user_role
             FROM orders o LEFT JOIN users u ON o.user_id = u.id
         """).fetchall()
-    elif role >= 1:  # manager
+    elif role >= 1:
         all_orders = conn.execute("""
             SELECT o.*, u.username as manager
             FROM orders o LEFT JOIN users u ON o.user_id = u.id
         """).fetchall()
-    else:  # user
+    else:  
         all_orders = conn.execute("""
             SELECT o.*, u.username as manager
             FROM orders o LEFT JOIN users u ON o.user_id = u.id
@@ -236,6 +269,7 @@ def orders():
                                   all_orders=all_orders,
                                   role=role,
                                   role_name=get_role_name(role),
+                                  role_names=ROLE_NAMES,  
                                   os=os)
 
 @app.route('/users')
